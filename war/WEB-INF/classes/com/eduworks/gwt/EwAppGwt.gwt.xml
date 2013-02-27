@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module rename-to='ewappgwt'>
+	<!-- Inherit the core Web Toolkit stuff.                        -->
+	<inherits name='com.google.gwt.user.User'/>
+	
+	<!-- Inherit the default GWT style sheet.  You can change       -->
+	<!-- the theme of your GWT application by uncommenting          -->
+	<!-- any one of the following lines.                            -->
+	
+	<inherits name='com.google.gwt.user.theme.clean.Clean'/>
+	<!-- <inherits name='com.google.gwt.user.theme.standard.Standard'/> -->
+	<!-- <inherits name='com.google.gwt.user.theme.chrome.Chrome'/> -->
+	<!-- <inherits name='com.google.gwt.user.theme.dark.Dark'/>     -->
+
+	<replace-with class="com.eduworks.isg.product.complaintanalyzer.client.util.MultiPartPostRequestBuilderFactoryIE">
+		<when-type-is class="com.eduworks.isg.product.complaintanalyzer.client.util.MultiPartPostRequestBuilderFactory"/>
+		<when-property-is name="user.agent" value="ie8" />
+	</replace-with>
+	
+	<replace-with class="com.eduworks.isg.product.complaintanalyzer.client.util.MultiPartPostRequestBuilderFactoryIE">
+		<when-type-is class="com.eduworks.isg.product.complaintanalyzer.client.util.MultiPartPostRequestBuilderFactory"/>
+		<when-property-is name="user.agent" value="ie9" />
+	</replace-with>
+	
+	<!-- Include GWTUpload library -->
+	<inherits name="com.google.gwt.jsonp.Jsonp"/>
+	<inherits name="com.google.gwt.json.JSON"/>
+    <inherits name="org.vectomatic.libgwtfile" />
+	
+	<!-- Other module inherits                                      -->
+
+	<!-- Inherit the default SmartGWT style sheet                   -->
+	<inherits name='com.smartgwt.SmartGwt' />
+
+	<!-- Specify the app entry point class.                         -->
+	<!-- Specify the paths for translatable code                    -->
+	<source path='client'/>
+	<source path='russel'/>
+	<source path='shared'/>
+	
+	<!-- Support reflection for GWT emulation                       -->
+	<generate-with class='com.eduworks.gwt.ReflectionGenerator'>
+	    <when-type-assignable class='com.eduworks.gwt.client.reflection.Reflection' />
+	</generate-with>
+
+</module>
