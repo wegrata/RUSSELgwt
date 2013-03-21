@@ -1,39 +1,21 @@
 /*
-Copyright (c) 2012 Eduworks Corporation
-All rights reserved.
- 
-This Software (including source code, binary code and documentation) is provided by Eduworks Corporation to
-the Government pursuant to contract number W31P4Q-12 -C- 0119 dated 21 March, 2012 issued by the U.S. Army 
-Contracting Command Redstone. This Software is a preliminary version in development. It does not fully operate
-as intended and has not been fully tested. This Software is provided to the U.S. Government for testing and
-evaluation under the following terms and conditions:
+Copyright 2012-2013 Eduworks Corporation
 
-	--Any redistribution of source code, binary code, or documentation must include this notice in its entirety, 
-	 starting with the above copyright notice and ending with the disclaimer below.
-	 
-	--Eduworks Corporation grants the U.S. Government the right to use, modify, reproduce, release, perform,
-	 display, and disclose the source code, binary code, and documentation within the Government for the purpose
-	 of evaluating and testing this Software.
-	 
-	--No other rights are granted and no other distribution or use is permitted, including without limitation 
-	 any use undertaken for profit, without the express written permission of Eduworks Corporation.
-	 
-	--All modifications to source code must be reported to Eduworks Corporation. Evaluators and testers shall
-	 additionally make best efforts to report test results, evaluation results and bugs to Eduworks Corporation
-	 using in-system feedback mechanism or email to russel@eduworks.com.
-	 
-THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
-THE COPYRIGHT HOLDER BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
-LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN 
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 
 package com.eduworks.gwt.client.net;
 
-import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,20 +28,18 @@ import com.eduworks.gwt.client.net.packet.AjaxPacket;
 import com.eduworks.gwt.client.net.packet.AlfrescoPacket;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArray;
-import com.google.gwt.http.client.URL;
 import com.google.gwt.json.client.JSONArray;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.json.client.JSONValue;
-import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.rpc.RemoteService;
 
 public class CommunicationHub implements RemoteService  {
 	/* STATIC METHODS */
 	
-	public static String ROOT_URL	= "http://sphinx.eduworks.com/"; 	// Staging Servers
-//	public static final String ROOT_URL	= "http://russel.eduworks.com/";  // Production Server
-	public static String BASE_URL	= ROOT_URL+"alfresco/";
+	public static String rootURL = "";
+	public static String baseURL = rootURL+"alfresco/";
+	public static String siteURL = "";
 	public static final String ATOM_XML_PREAMBLE = "atomxml";
 	public final static String POST = "POST";
 	public final static String GET = "GET";
@@ -79,7 +59,7 @@ public class CommunicationHub implements RemoteService  {
 
 	/* NATIVE METHODS */
 	public final native static JavaScriptObject parseJSON(String x) /*-{ 
-		var e = (x!=null)? x.replace(/[\r\n]/g," "): "{}";
+		var e = (x!=null)? x.replace(/[\r\n\t]/g," "): "{}";
 		return eval('(' + ((e==""||e==null)? '{}' : e) + ')'); 
 	}-*/;
 
@@ -90,7 +70,7 @@ public class CommunicationHub implements RemoteService  {
 	}-*/;
 	
 	public final native static JsArray<AlfrescoPacket> parseJSA(String x) /*-{ 
-		var e = (x!=null)? x.replace(/[\r\n]/g," "): "[]";
+		var e = (x!=null)? x.replace(/[\r\n\t]/g," "): "[]";
 		return eval('(' + ((e==""||e==null)? '[]' : e) + ')'); 
 	}-*/;
 
@@ -213,7 +193,7 @@ public class CommunicationHub implements RemoteService  {
 			xhr=new ActiveXObject("Microsoft.XMLHTTP");
 	
 	    xhr.open(httpMethod, url, true);
-	    if (binaryData)
+	    if (binaryData&&$wnd.isIE===undefined)
 	    	xhr.responseType = "arraybuffer";
 	    if (outgoingPost!=null&&outgoingPost.charAt(0)=="{")
 	    	xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
@@ -227,7 +207,7 @@ public class CommunicationHub implements RemoteService  {
 	    	xhr.setRequestHeader("Authorization", "Basic " + @com.eduworks.gwt.client.net.api.AlfrescoApi::basicAuthenicationHeader);
 	    xhr.onreadystatechange = function() {
 	        if (xhr.readyState == 4 && (xhr.status >= 200 && xhr.status <= 206)) 
-	        	if (!binaryData)
+	        	if (!binaryData||!($wnd.isIE===undefined))
 	        		callback.@com.eduworks.gwt.client.net.callback.AjaxCallback::onSuccess(Ljava/lang/String;)(xhr.responseText);
 	        	else 
 	        		callback.@com.eduworks.gwt.client.net.callback.AjaxCallback::onFileSuccess(Ljava/lang/String;Ljava/lang/Object;)(xhr.getResponseHeader('content-type'), xhr.response);

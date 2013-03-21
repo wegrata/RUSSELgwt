@@ -1,45 +1,28 @@
 /*
-Copyright (c) 2012 Eduworks Corporation
-All rights reserved.
- 
-This Software (including source code, binary code and documentation) is provided by Eduworks Corporation to
-the Government pursuant to contract number W31P4Q-12 -C- 0119 dated 21 March, 2012 issued by the U.S. Army 
-Contracting Command Redstone. This Software is a preliminary version in development. It does not fully operate
-as intended and has not been fully tested. This Software is provided to the U.S. Government for testing and
-evaluation under the following terms and conditions:
+Copyright 2012-2013 Eduworks Corporation
 
-	--Any redistribution of source code, binary code, or documentation must include this notice in its entirety, 
-	 starting with the above copyright notice and ending with the disclaimer below.
-	 
-	--Eduworks Corporation grants the U.S. Government the right to use, modify, reproduce, release, perform,
-	 display, and disclose the source code, binary code, and documentation within the Government for the purpose
-	 of evaluating and testing this Software.
-	 
-	--No other rights are granted and no other distribution or use is permitted, including without limitation 
-	 any use undertaken for profit, without the express written permission of Eduworks Corporation.
-	 
-	--All modifications to source code must be reported to Eduworks Corporation. Evaluators and testers shall
-	 additionally make best efforts to report test results, evaluation results and bugs to Eduworks Corporation
-	 using in-system feedback mechanism or email to russel@eduworks.com.
-	 
-THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
-THE COPYRIGHT HOLDER BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
-LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN 
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
-
 package com.eduworks.gwt.client.net.api;
+
+import org.vectomatic.file.Blob;
 
 import com.eduworks.gwt.client.net.CommunicationHub;
 import com.eduworks.gwt.client.net.callback.AlfrescoCallback;
 import com.eduworks.gwt.client.net.packet.AlfrescoPacket;
 import com.eduworks.gwt.client.util.Base64;
+import com.eduworks.gwt.client.util.BlobUtils;
 import com.eduworks.gwt.client.util.Browser;
-import com.google.gwt.http.client.URL;
-import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import com.google.gwt.user.client.Window;
 
 public class AlfrescoApi {
@@ -50,6 +33,31 @@ public class AlfrescoApi {
 	public static String basicAuthenicationHeader = null;
 	public static String currentDirectoryId = "";
 	public static String ticket = null;
+	public static boolean userHome = true;
+	
+	// AlfrescoAPI private methods
+	
+	private static String joinAspects0(String[] aspects) {
+		String aspectString = "";
+		for (int aspectIndex=0;aspectIndex<aspects.length;aspectIndex++)
+			aspectString += "," + aspects[aspectIndex];
+		if (aspectString!="")
+			aspectString = aspectString.substring(1);
+		return aspectString;
+	}
+
+	private static String getCurrentDirectoryId0() {
+		return currentDirectoryId.split("/")[currentDirectoryId.split("/").length-1];
+	}
+	
+	// AlfrescoAPI public methods
+	
+	public static String getCurrentDirectoryPath() {
+		if (userHome)
+			return "User Homes/" + AlfrescoApi.username;
+		else
+			return "";
+	}
 	
 	public static String[] getWebServiceCallParameters() {
 		if (ticket == null) return new String[0];
@@ -59,11 +67,7 @@ public class AlfrescoApi {
 
 	public static void getChildrenOfCurrentDirectory(AlfrescoCallback<AlfrescoPacket> callback) {
 		CommunicationHub.sendHTTP(CommunicationHub.GET,
-				AlfrescoURL.getAlfrescoDirectoryListing(getCurrentDirectoryId()), null, false, callback);
-	}
-
-	private static String getCurrentDirectoryId() {
-		return currentDirectoryId.split("/")[currentDirectoryId.split("/").length-1];
+				AlfrescoURL.getAlfrescoDirectoryListing(getCurrentDirectoryId0()), null, false, callback);
 	}
 	
 	public static void getObjectRatings(final String docResId, AlfrescoCallback<AlfrescoPacket> callback) {
@@ -77,7 +81,7 @@ public class AlfrescoApi {
 	public static void rateObject(final String docResId, final Integer rating, AlfrescoCallback<AlfrescoPacket> callback) {
 		AlfrescoPacket ap = AlfrescoPacket.makePacket();
 		ap.addKeyValue("rating", rating.toString());
-		ap.addKeyValue("ratingScheme", "\"" + RUSSEL_RATING_SCHEME + "\"");
+		ap.addKeyValue("ratingScheme", RUSSEL_RATING_SCHEME);
 		CommunicationHub.sendHTTP(CommunicationHub.POST, 
 								  AlfrescoURL.getAlfrescoRatingURL(docResId),
 								  ap.toJSONString(),
@@ -89,8 +93,8 @@ public class AlfrescoApi {
 		username = uname;
 		basicAuthenicationHeader = Base64.encode(username + ":" + password);
 		AlfrescoPacket ap = AlfrescoPacket.makePacket();
-		ap.addKeyValue("username", "\"" + uname + "\"");
-		ap.addKeyValue("password", "\"" + password + "\"");
+		ap.addKeyValue("username", uname);
+		ap.addKeyValue("password", password);
 		CommunicationHub.sendHTTP(CommunicationHub.POST, 
 								  AlfrescoURL.getAlfrescoLoginURL(), 
 								  ap.toJSONString(), 
@@ -114,26 +118,20 @@ public class AlfrescoApi {
 								  callback);			
 	}
 	
-	private static final native String getThumbnailImageURL(AlfrescoPacket ap) /*-{
-		var bb;
-		if (Blob==undefined) {
-			bb = new (window.BlobBuilder || window.MozBlobBuilder || window.WebKitBlobBuilder || window.OBlobBuilder || window.msBlobBuilder);
-			bb.append(ap.contentStream);
-			if (window.URL!=undefined&&window.URL.createObjectURL!=undefined)
-				return window.URL.createObjectURL(bb.getBlob("image/png"));
-			else
-				return window.webkitURL.createObjectURL(bb.getBlob("image/png"));
-		} else {
-			bb = new Blob([ap.contentStream], { "type": "image/png" });
-			if (window.URL!=undefined&&window.URL.createObjectURL!=undefined)
-				return window.URL.createObjectURL(bb);
-			else
-				return window.webkitURL.createObjectURL(bb);
-		}
-	}-*/;
-
-	public static String getThumbnail(String id) {
-		return AlfrescoURL.buildAlfrescoThumbnailURL(id);
+	public static void updateContentStream(String nodeId, String contents, AlfrescoCallback<AlfrescoPacket> callback) {
+		CommunicationHub.sendHTTP(CommunicationHub.POST, 
+								  AlfrescoURL.getUpdateObjectStream(nodeId),
+								  contents, 
+								  false, 
+								  callback);
+	}
+	
+	public static void uploadContentStream(String contents, AlfrescoCallback<AlfrescoPacket> callback) {
+		CommunicationHub.sendHTTP(CommunicationHub.POST, 
+								  AlfrescoURL.getUploadObjectStream(), 
+								  contents, 
+								  false, 
+								  callback);	
 	}
 	
 	public static void getThumbnail(String id, final AlfrescoCallback<AlfrescoPacket> callback) {
@@ -150,7 +148,7 @@ public class AlfrescoApi {
 										@Override
 										public void onSuccess(AlfrescoPacket alfrescoPacket) {
 											AlfrescoPacket ap = AlfrescoPacket.makePacket();
-											ap.addKeyValue("imageURL", "\"" + getThumbnailImageURL(alfrescoPacket) + "\"");
+											ap.addKeyValue("imageURL", BlobUtils.getBlobURL(BlobUtils.buildBlob("image/png", alfrescoPacket.getContents())));
 											callback.onSuccess(ap);
 										}
 										
@@ -183,7 +181,9 @@ public class AlfrescoApi {
 							
 										@Override
 										public void onSuccess(AlfrescoPacket result) {
-											currentDirectoryId = result.getDirectory();
+											if (path.equalsIgnoreCase("Company%20Home"))
+												userHome = false;
+											currentDirectoryId = result.getNodeId();
 										}
 									});
 	}
@@ -196,16 +196,64 @@ public class AlfrescoApi {
 								  new AlfrescoCallback<AlfrescoPacket>() {
 										@Override
 										public void onFailure(Throwable caught) {
-											Window.alert("Fooing updating current directory failed - " + caught.getMessage());
 											callback.onFailure(caught);
 										}
 							
 										@Override
 										public void onSuccess(AlfrescoPacket result) {
-											currentDirectoryId = result.getDirectory();
+											if (path.equalsIgnoreCase("Company%20Home"))
+												userHome = false;
+											currentDirectoryId = result.getNodeId();
 											callback.onSuccess(result);
 										}
 									});
+	}
+	
+	public static void getMetadata(final String id, final AlfrescoCallback<AlfrescoPacket> callback) {
+		CommunicationHub.sendHTTP(CommunicationHub.GET, 
+								  AlfrescoURL.getAlfrescoNodeURL(id), 
+								  null,
+								  false,
+								  new AlfrescoCallback<AlfrescoPacket>() {
+									@Override
+									public void onSuccess(final AlfrescoPacket nodeAP) {
+										callback.onSuccess(nodeAP);
+									}
+									
+									public void onFailure(Throwable caught) {
+										callback.onSuccess(null);
+									}
+								});
+	}
+
+	public static void getMetadataAndTags(final String id, final AlfrescoCallback<AlfrescoPacket> callback) {
+		CommunicationHub.sendHTTP(CommunicationHub.GET, 
+								  AlfrescoURL.getAlfrescoNodeURL(id), 
+								  null,
+								  false,
+								  new AlfrescoCallback<AlfrescoPacket>() {
+									@Override
+									public void onSuccess(final AlfrescoPacket nodeAP) {
+										CommunicationHub.sendHTTP(CommunicationHub.GET,
+																  AlfrescoURL.getAlfrescoTagsURL(id),
+																  null,
+																  false, 
+																  new AlfrescoCallback<AlfrescoPacket>() {
+																	@Override
+																	public void onSuccess(AlfrescoPacket tagsAP) {
+																		callback.onSuccess((AlfrescoPacket)nodeAP.mergePackets(tagsAP));
+																	}
+																	
+																	public void onFailure(Throwable caught) {
+																		callback.onSuccess(nodeAP);
+																	}
+																  });
+									}
+									
+									public void onFailure(Throwable caught) {
+										callback.onSuccess(null);
+									}
+								});
 	}
 
 	public static void search(AlfrescoPacket ap, AlfrescoCallback<AlfrescoPacket> callback) {
@@ -220,7 +268,7 @@ public class AlfrescoApi {
 								  callback);	
 	}
 	
-	public static void setObjectProperties(String id, String postData, AlfrescoCallback<AlfrescoPacket> callback) {
+	public static void setObjectMetadata(String id, String postData, AlfrescoCallback<AlfrescoPacket> callback) {
 		CommunicationHub.sendHTTP(CommunicationHub.POST,
 						    	  AlfrescoURL.getAlfrescoMetadataURL(id), 
 								  postData, 
@@ -256,9 +304,9 @@ public class AlfrescoApi {
 								  callback);
 	}
 	
-	public static void getAllObjectComments(String nodeId, AlfrescoCallback<AlfrescoPacket> callback) {
+	public static void getObjectComments(String nodeId, AlfrescoCallback<AlfrescoPacket> callback) {
 		CommunicationHub.sendHTTP(CommunicationHub.GET, 
-								  AlfrescoURL.getAlfrescoNodeURL(nodeId) + "/comments", 
+								  AlfrescoURL.getAlfrescoCommentsURL(nodeId), 
 								  null, 
 								  false,
 								  callback);
@@ -269,7 +317,7 @@ public class AlfrescoApi {
 		ap.addKeyValue("title", title);
 		ap.addKeyValue("content", commentData);
 		CommunicationHub.sendHTTP(CommunicationHub.POST, 
-								  AlfrescoURL.getAlfrescoNodeURL(nodeId) + "/comments", 
+								  AlfrescoURL.getAlfrescoCommentsURL(nodeId), 
 								  ap.toJSONString(), 
 								  false,
 								  callback);
@@ -277,7 +325,7 @@ public class AlfrescoApi {
 	
 	public static void deleteObjectComment(String nodeId, AlfrescoCallback<AlfrescoPacket> callback) {
 		CommunicationHub.sendHTTP(CommunicationHub.DELETE, 
-								  AlfrescoURL.getAlfrescoCommentsURL(nodeId), 
+								  AlfrescoURL.getAlfrescoDeleteCommentURL(nodeId), 
 				  				  null, 
 				  				  false, 
 				  				  callback);
@@ -302,17 +350,30 @@ public class AlfrescoApi {
 	public static void addAspectToNode(String nodeId, String[] aspects, AlfrescoCallback<AlfrescoPacket> callback) {
 		AlfrescoPacket ap = AlfrescoPacket.makePacket();
 		ap.addKeyValue("nodeRef", "workspace://SpacesStore/" + nodeId);
-		String aspectString = "";
-		for (int aspectIndex=0;aspectIndex<aspects.length;aspectIndex++)
-			aspectString += "," + aspects[aspectIndex];
-		if (aspectString!="")
-			aspectString = aspectString.substring(1);
-		ap.addKeyValue("aspects", aspectString);
+		ap.addKeyValue("aspects", joinAspects0(aspects));
 		CommunicationHub.sendHTTP(CommunicationHub.POST, 
 								  AlfrescoURL.getAlfrescoAddAspectURL(), 
-								  ap.toJSONWrappedString(), 
+								  ap.toJSONString(), 
 								  false,
 								  callback);	
+	}
+	
+	public static void uploadFile(Blob payload, String name, String[] aspects, AlfrescoCallback<AlfrescoPacket> callback) {
+		CommunicationHub.sendForm(AlfrescoURL.getAlfrescoUploadURL(), 
+								  name, 
+								  AlfrescoURL.ALFRESCO_STORE_TYPE + "://" + AlfrescoURL.ALFRESCO_STORE_ID + "/" + AlfrescoApi.currentDirectoryId, 
+							  	  payload, 
+							  	  joinAspects0(aspects),
+							  	  callback);
+	}
+	
+	public static void updateFile(Blob payload, String name, String nodeId, String[] aspects, AlfrescoCallback<AlfrescoPacket> callback) {
+		CommunicationHub.sendFormUpdate(AlfrescoURL.getAlfrescoUploadURL(),
+										name,
+										AlfrescoURL.ALFRESCO_STORE_TYPE + "://" + AlfrescoURL.ALFRESCO_STORE_ID + "/" + nodeId,
+										payload,
+										joinAspects0(aspects),
+										callback);
 	}
 	
 	/**
@@ -339,11 +400,6 @@ public class AlfrescoApi {
 		else if (objectType==FOLDER_OBJECT)
 			payloadXML += "<cmis:value>cmis:folder</cmis:value>";
 		payloadXML += "</cmis:propertyId>";
-		/* unused currently unsure if needed
-			<cmis:propertyString propertyDefinitionId=\"cmis:name\">\
-			<cmis:value>CMIS Demo</cmis:value>\
-			</cmis:propertyString>\
-		*/
 		payloadXML += "</cmis:properties></cmisra:object></entry>";
 		CommunicationHub.sendHTTP(CommunicationHub.POST, 
 								  AlfrescoURL.getAlfrescoCreateNode(createLocation), 

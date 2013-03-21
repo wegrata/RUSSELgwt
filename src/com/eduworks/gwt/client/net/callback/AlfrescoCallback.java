@@ -1,35 +1,18 @@
 /*
-Copyright (c) 2012 Eduworks Corporation
-All rights reserved.
- 
-This Software (including source code, binary code and documentation) is provided by Eduworks Corporation to
-the Government pursuant to contract number W31P4Q-12 -C- 0119 dated 21 March, 2012 issued by the U.S. Army 
-Contracting Command Redstone. This Software is a preliminary version in development. It does not fully operate
-as intended and has not been fully tested. This Software is provided to the U.S. Government for testing and
-evaluation under the following terms and conditions:
+Copyright 2012-2013 Eduworks Corporation
 
-	--Any redistribution of source code, binary code, or documentation must include this notice in its entirety, 
-	 starting with the above copyright notice and ending with the disclaimer below.
-	 
-	--Eduworks Corporation grants the U.S. Government the right to use, modify, reproduce, release, perform,
-	 display, and disclose the source code, binary code, and documentation within the Government for the purpose
-	 of evaluating and testing this Software.
-	 
-	--No other rights are granted and no other distribution or use is permitted, including without limitation 
-	 any use undertaken for profit, without the express written permission of Eduworks Corporation.
-	 
-	--All modifications to source code must be reported to Eduworks Corporation. Evaluators and testers shall
-	 additionally make best efforts to report test results, evaluation results and bugs to Eduworks Corporation
-	 using in-system feedback mechanism or email to russel@eduworks.com.
-	 
-THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
-THE COPYRIGHT HOLDER BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
-LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN 
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
- */
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
 package com.eduworks.gwt.client.net.callback;
 
@@ -37,6 +20,7 @@ import org.vectomatic.arrays.ArrayBuffer;
 
 import com.eduworks.gwt.client.net.CommunicationHub;
 import com.eduworks.gwt.client.net.packet.AlfrescoPacket;
+import com.eduworks.gwt.client.util.Browser;
 
 public abstract class AlfrescoCallback<Packet> extends AjaxCallback<Packet>
 {
@@ -49,6 +33,31 @@ public abstract class AlfrescoCallback<Packet> extends AjaxCallback<Packet>
 
 	public abstract void onSuccess(AlfrescoPacket alfrescoPacket);
 
+	private String processArray(String result) {
+		String cleanedArray = "";
+		
+		String arrayGuts = result.substring(1, result.length()-1).trim();
+		
+		String[] terms = arrayGuts.split(",");
+		for (int termsIndex=0;termsIndex<terms.length;termsIndex++) {
+			terms[termsIndex] = terms[termsIndex].trim();
+			if (!terms[termsIndex].startsWith("\"")&&!terms[termsIndex].endsWith("\""))
+				terms[termsIndex] = "\"" + terms[termsIndex].trim() + "\"";
+			else if (terms[termsIndex].startsWith("\"")&&!terms[termsIndex].endsWith("\""))
+				terms[termsIndex] = terms[termsIndex].trim() + "\"";
+			else if (!terms[termsIndex].startsWith("\"")&&terms[termsIndex].endsWith("\""))
+					terms[termsIndex] = "\"" + terms[termsIndex].trim();
+		}
+		
+		for (int termsIndex=0;termsIndex<terms.length;termsIndex++)
+			cleanedArray += "," + terms[termsIndex];
+		
+		if (cleanedArray!="")
+			cleanedArray = cleanedArray.substring(1);
+		
+		return "[" + cleanedArray + "]";
+	}
+	
 	public void onSuccess(String result)
 	{
 		String pack = result.trim();
@@ -59,10 +68,7 @@ public abstract class AlfrescoCallback<Packet> extends AjaxCallback<Packet>
 		else if (pack.startsWith("["))
 		{
 			AlfrescoPacket ap = AlfrescoPacket.makePacket();
-			ap.addKeyValue(
-					"contentStream",
-					CommunicationHub.parseJSA("[\""
-							+ result.substring(1, result.length() - 2).replaceAll("w+,w+", "\",\"").trim() + "\"]"));
+			ap.addKeyValue("contentStream", CommunicationHub.parseJSA(processArray(result)));
 			onSuccess(ap);
 		}
 		else

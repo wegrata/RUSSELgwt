@@ -1,34 +1,17 @@
 /*
-Copyright (c) 2012 Eduworks Corporation
-All rights reserved.
- 
-This Software (including source code, binary code and documentation) is provided by Eduworks Corporation to
-the Government pursuant to contract number W31P4Q-12 -C- 0119 dated 21 March, 2012 issued by the U.S. Army 
-Contracting Command Redstone. This Software is a preliminary version in development. It does not fully operate
-as intended and has not been fully tested. This Software is provided to the U.S. Government for testing and
-evaluation under the following terms and conditions:
+Copyright 2012-2013 Eduworks Corporation
 
-	--Any redistribution of source code, binary code, or documentation must include this notice in its entirety, 
-	 starting with the above copyright notice and ending with the disclaimer below.
-	 
-	--Eduworks Corporation grants the U.S. Government the right to use, modify, reproduce, release, perform,
-	 display, and disclose the source code, binary code, and documentation within the Government for the purpose
-	 of evaluating and testing this Software.
-	 
-	--No other rights are granted and no other distribution or use is permitted, including without limitation 
-	 any use undertaken for profit, without the express written permission of Eduworks Corporation.
-	 
-	--All modifications to source code must be reported to Eduworks Corporation. Evaluators and testers shall
-	 additionally make best efforts to report test results, evaluation results and bugs to Eduworks Corporation
-	 using in-system feedback mechanism or email to russel@eduworks.com.
-	 
-THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
-THE COPYRIGHT HOLDER BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
-LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN 
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 
 package com.eduworks.gwt.client.pagebuilder;
@@ -37,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Vector;
 
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import com.eduworks.gwt.client.net.callback.EventCallback;
 import com.google.gwt.core.client.JavaScriptObject;
@@ -64,11 +46,10 @@ import com.google.gwt.user.client.ui.Widget;
 
 public class PageAssembler
 {
-	private FlowPanel body = new FlowPanel();
-	private ArrayList<Widget> contents = new ArrayList<Widget>();
-	private static PageAssembler instance;
-	private long iDCounter;
-	private String rootPanelName;
+	private static FlowPanel body = new FlowPanel();
+	private static ArrayList<Widget> contents = new ArrayList<Widget>();
+	private static long iDCounter;
+	private static String rootPanelName;
 	final public static String A = "a";
 	final public static String TEXT = "text";
 	final public static String PASSWORD = "password";
@@ -82,9 +63,11 @@ public class PageAssembler
 	final public static String CONTENT_HEADER = "contentHeader";
 	final public static String CONTENT_FOOTER = "contentFooter";
 	private static String buildNumber;
+	private static String helpUrl;
 
-	public void setTemplate(String rawHeader, String rawFooter, String rPanelName)
+	public static void setTemplate(String rawHeader, String rawFooter, String rPanelName)
 	{
+		body.getElement().setId("flowContainer");
 		clearContents();
 		RootPanel.get(CONTENT_HEADER).add(new HTML(rawHeader));
 		RootPanel.get(CONTENT_FOOTER).add(new HTML(rawFooter));
@@ -105,6 +88,14 @@ public class PageAssembler
 		((Label)elementToWidget("buildNumber", LABEL)).setText(buildNumber);										
 	}
 	
+	public static final void setHelp(String help) {
+		helpUrl = help;
+	}
+	
+	public static final String getHelp() {
+		return helpUrl;										
+	}
+	
 	public static final native void closePopup(String elementName) /*-{
 		$wnd.$('#' + elementName).trigger('reveal:close');
 	}-*/;
@@ -117,27 +108,18 @@ public class PageAssembler
 		$wnd.boxedCustomAppJavascript();
 	}-*/;
 	
-	public void ready(Widget obj)
+	public static void ready(Widget obj)
 	{
 		contents.add(obj);
 	}
 
-	public static PageAssembler getInstance()
-	{
-		if (instance == null)
-			instance = new PageAssembler();
-
-		return instance;
-	}
-
 	/** Builds everything that has been readied into the rPanelName given in template setup, clears ready list after. */
-	public void buildContents()
+	public static void buildContents()
 	{
 		body.clear();
-		int elementCount = DOM.getChildCount(body.getElement());
-		for (int nodeIndex=0;nodeIndex<elementCount;nodeIndex++) {
-			DOM.getChild(body.getElement(), 0).removeFromParent();
-		}
+		Element childNode;
+		while ((childNode=DOM.getFirstChild(body.getElement()))!=null)
+			DOM.removeChild(body.getElement(), childNode);
 			   
 		for (int i = 0; i < contents.size(); i++)
 			body.add(contents.get(i));
@@ -147,14 +129,14 @@ public class PageAssembler
 		contents.clear();
 	}
 
-	public void clearContents()
+	public static void clearContents()
 	{
 		iDCounter = 0;
 		body.clear();
-		int elementCount = DOM.getChildCount(body.getElement());
-		for (int nodeIndex=0;nodeIndex<elementCount;nodeIndex++) {
-			DOM.getChild(body.getElement(), 0).removeFromParent();
-		}
+		Element childNode;
+		while ((childNode=DOM.getFirstChild(body.getElement()))!=null)
+			DOM.removeChild(body.getElement(), childNode);
+		
 		contents.clear();
 		RootPanel.get(CONTENT_HEADER).clear();
 		RootPanel.get(CONTENT_FOOTER).clear();
@@ -162,7 +144,7 @@ public class PageAssembler
 	}
 
 	/** @Returns a list of IDs that get put into the template */
-	public Vector<String> inject(String elementName, String token, Widget w, boolean inFront) {
+	public static Vector<String> inject(String elementName, String token, Widget w, boolean inFront) {
 		boolean incrementIDCounter = false;
 		Vector<String> convertedIDs = new Vector<String>();
 		Vector<Element> nodeTree = new Vector<Element>();
@@ -200,7 +182,47 @@ public class PageAssembler
 		return convertedIDs;
 	}
 	
-	public Vector<String> merge(String elementName, String token, Element incomingE) {
+	/** @Returns a list of IDs that get put into the template */
+	public static Vector<String> inject(Element element, String token, Widget w, boolean inFront) {
+		boolean incrementIDCounter = false;
+		Vector<String> convertedIDs = new Vector<String>();
+		Vector<Element> nodeTree = new Vector<Element>();
+		String elementID;
+		Element e;
+		int indexOfToken=-1;
+
+		nodeTree.add(w.getElement());
+
+		while(nodeTree.size()>0) {
+			e = nodeTree.remove(0);
+				for (int x=0;x<e.getChildCount();x++) {
+					if (e.getChild(x).getNodeType()==Node.ELEMENT_NODE)
+						nodeTree.add((Element)e.getChild(x));
+				}
+			elementID = e.getId();
+			if (elementID!=null)
+				indexOfToken = elementID.indexOf(token);
+			if (indexOfToken!=-1) {
+				incrementIDCounter = true;
+				e.setId(elementID.substring(0, indexOfToken) + iDCounter + elementID.substring(indexOfToken + token.length()));
+				convertedIDs.add(e.getId());
+			} else if (e.getId()!="")
+				convertedIDs.add(e.getId());
+		}
+
+		if (incrementIDCounter) iDCounter++;
+		
+		if (DOM.isOrHasChild(element, w.getElement()))
+			DOM.removeChild(element, w.getElement());
+		if (inFront)
+			DOM.insertChild(element, w.getElement(), 0);
+		else
+			DOM.appendChild(element, w.getElement());
+
+		return convertedIDs;
+	}
+	
+	public static Vector<String> merge(String elementName, String token, Element incomingE) {
 		boolean incrementIDCounter = false;
 		Vector<String> convertedIDs = new Vector<String>();
 		Vector<Element> nodeTree = new Vector<Element>();
@@ -235,7 +257,7 @@ public class PageAssembler
 	}
 	
 	public static native JavaScriptObject getIFrameElement(Element iFrame, String objId) /*-{
-		var doc = iFrame.contentDocument || iFrame.contentWindow;
+		var doc = iFrame.contentDocument || iFrame.contentWindow.document;
 		if (doc!=null)
 			return doc.getElementById(objId);
 		else
@@ -300,7 +322,7 @@ public class PageAssembler
 			else if (typ==FILE)
 				result = FileUpload.wrap(e);
 			else if (typ==FORM)
-				result = FormPanel.wrap(e);
+				result = FormPanel.wrap(e, true);
 			else if (typ==FRAME)
 				result = Frame.wrap(e);
 			DOM.sinkEvents(e, eventsSunk);
@@ -383,4 +405,8 @@ public class PageAssembler
 		}
 		return result;
 	}
+
+	public static native void setWidth(Element element, String value) /*-{
+		element.style.width = value;
+	}-*/;
 }

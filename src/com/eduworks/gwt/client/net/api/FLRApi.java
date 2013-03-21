@@ -1,351 +1,375 @@
 /*
-Copyright (c) 2012 Eduworks Corporation
-All rights reserved.
- 
-This Software (including source code, binary code and documentation) is provided by Eduworks Corporation to
-the Government pursuant to contract number W31P4Q-12 -C- 0119 dated 21 March, 2012 issued by the U.S. Army 
-Contracting Command Redstone. This Software is a preliminary version in development. It does not fully operate
-as intended and has not been fully tested. This Software is provided to the U.S. Government for testing and
-evaluation under the following terms and conditions:
+Copyright 2012-2013 Eduworks Corporation
 
-	--Any redistribution of source code, binary code, or documentation must include this notice in its entirety, 
-	 starting with the above copyright notice and ending with the disclaimer below.
-	 
-	--Eduworks Corporation grants the U.S. Government the right to use, modify, reproduce, release, perform,
-	 display, and disclose the source code, binary code, and documentation within the Government for the purpose
-	 of evaluating and testing this Software.
-	 
-	--No other rights are granted and no other distribution or use is permitted, including without limitation 
-	 any use undertaken for profit, without the express written permission of Eduworks Corporation.
-	 
-	--All modifications to source code must be reported to Eduworks Corporation. Evaluators and testers shall
-	 additionally make best efforts to report test results, evaluation results and bugs to Eduworks Corporation
-	 using in-system feedback mechanism or email to russel@eduworks.com.
-	 
-THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
-THE COPYRIGHT HOLDER BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
-LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN 
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 
 package com.eduworks.gwt.client.net.api;
 
+import java.util.ArrayList;
+
 import com.eduworks.gwt.client.net.CommunicationHub;
 import com.eduworks.gwt.client.net.callback.FLRCallback;
+import com.eduworks.gwt.client.net.packet.AlfrescoPacket;
 import com.eduworks.gwt.client.net.packet.FLRPacket;
-import com.eduworks.gwt.client.util.Base64;
-import com.google.gwt.user.client.Window;
+import com.google.gwt.core.client.JsArray;
+import com.google.gwt.core.client.JsDate;
+
 
 public class FLRApi {
 	public static final String FLR_RUSSEL_MIME_TYPE = "russel/flr";
-	public static final String FLR_SAND_BOX_URL = "http://sandbox.learningregistry.org/";
-	public static String FLR_REPOSITORY_URL = FLR_SAND_BOX_URL;  // The default will be the FLR sand box, but within an instance of RUSSEL this can be configured.
+	public static final String FLR_SUCCESS = "success";
+	public static final String FLR_FAILURE = "failure";
+	public static final String FLR_ACTIVITY_RATINGS = "ratings";
+	public static final String FLR_ACTIVITY_COMMENTS = "comments";
+	public static final String FLR_ACTIVITY_ISD = "isd";
+	
+	public static String FLR_REPOSITORY_SETTING = "FLR-repository";
+	public static String FLR_IMPORT_SETTING = "FLR-import";
+	public static String FLR_PUBLISH_SETTING = "FLR-publish";
+	public static String FLR_ACTIVITY_SETTING = "FLR-activity";
+	
+	public static final String FLR_NOT_IN_USE = "None";
+    public static final String FLR_SAND_BOX = "FLR-Sandbox";
+    public static final String FLR_CUSTOM_URL = "FLR-Custom";
+    public static String FLR_REPOSITORY_MODE = FLR_SAND_BOX;
+
+	public static final String FLR_IMPORT_DISABLED = "FLR-NoImport";
+	public static final String FLR_IMPORT_ENABLED = "FLR-Import";
+	public static String FLR_IMPORT_MODE = FLR_IMPORT_ENABLED;
+	
 	public static final String FLR_PUBLISH_ACTIONS_NONE = "FLR-NoPublish";
 	public static final String FLR_PUBLISH_ACTIONS_GENERAL = "FLR-GeneralPublish";
 	public static final String FLR_PUBLISH_ACTIONS_ISD = "FLR-IsdPublish";
 	public static final String FLR_PUBLISH_ACTIONS_ALL = "FLR-AllPublish";
 	public static String FLR_PUBLISH_MODE = FLR_PUBLISH_ACTIONS_ALL;
-	public static final String FLR_SEARCH_ACTIONS_NONE = "FLR-NoSearch";
-	public static final String FLR_SEARCH_ACTIONS_GENERAL = "FLR-GeneralSearch";
-	public static final String FLR_SEARCH_ACTIONS_ISD = "FLR-IsdSearch";
-	public static final String FLR_SEARCH_ACTIONS_ALL = "FLR-AllSearch";
-	public static String FLR_SEARCH_MODE = FLR_SEARCH_ACTIONS_ALL;
 	
-//	public static final String RUSSEL_RATING_SCHEME = "fiveStarRatingScheme";
-//	public static final String FOLDER_OBJECT = "cmis:folder";
-//	public static final String DOCUMENT_OBJECT = "cmis:document";
-	public static String username = "";
-	public static String password = "";
-	public static String basicAuthenicationHeader = null;
+	public static final String FLR_ACTIVITY_ACTIONS_NONE = "FLR-NoActivity";
+	public static final String FLR_ACTIVITY_ACTIONS_FEEDBACK = "FLR-FeedbackActivity";
+	public static final String FLR_ACTIVITY_ACTIONS_ISD = "FLR-IsdActivity";
+	public static final String FLR_ACTIVITY_ACTIONS_ALL = "FLR-AllActivity";
+	public static String FLR_ACTIVITY_MODE = FLR_ACTIVITY_ACTIONS_ALL;
+	
 	public static String currentDirectoryId = "";
-	public static String ticket = null;
-	
-	public static String[] getWebServiceCallParameters() {
-		if (ticket == null) return new String[0];
+	public static String ticket;
 
-		return new String[] {"alf_ticket", ticket};
+	// FLR API private methods
+	private final native static String getISOdate0(JsDate date) /*-{
+		return date.toISOString();
+	}-*/;
+	
+	private static String buildNsdlDcRecord0(AlfrescoPacket ap) {
+		String nsdl = null;
+		String valueTest = null;
+		
+		nsdl = "<nsdl_dc:nsdl_dc xmlns:xsi=\'http://www.w3.org/2001/XMLSchema-instance\'  " +
+		       "                 xmlns:dc=\'http://purl.org/dc/elements/1.1/\'  "+
+		       "                 xmlns:dct=\'http://purl.org/dc/terms/\'       "+
+		       "                 xmlns:ieee=\'http://www.ieee.org/xsd/LOMv1p0\' "+
+		       "                 xmlns:nsdl_dc=\'http://ns.nsdl.org/nsdl_dc_v1.02/\'  schemaVersion=\'1.02.020\'  "+
+		       "                 xsi:schemaLocation=\'http://ns.nsdl.org/nsdl_dc_v1.02/ http://ns.nsdl.org/schemas/nsdl_dc/nsdl_dc_v1.02.xsd\'> ";
+		nsdl += "       <dc:identifier xsi:type=\'dct:URI\'>"+ CommunicationHub.siteURL+"?id="+ ap.getNodeId() + "</dc:identifier>";
+		if ((valueTest = ap.getTitle()) != "") {
+			nsdl += "       <dc:title>" + valueTest + "</dc:title>";
+		}
+		if ((valueTest = ap.getDescription()) != "") {
+			nsdl += "       <dc:description>" + valueTest + "</dc:description>";
+		}
+		if ((valueTest = ap.getPublisher()) != "") {
+			nsdl += "       <dc:creator>" + valueTest + "</dc:creator>";
+		}
+		if ((valueTest = ap.getRusselValue("russel:language")) != "") {		
+			nsdl += "       <dc:language>" + valueTest + "</dc:language> ";
+		}
+		if ((valueTest = ap.getRusselValue("russel:agerange")) != "") {		
+			nsdl += "       <dct:educationLevel xsi:type=\'nsdl_dc:NSDLEdLevel\'>" + valueTest + "</dct:educationLevel>";
+		}
+		if ((valueTest = ap.getMimeType()) != "") {		
+			nsdl += "       <dc:format>" + valueTest + "</dc:format>";
+		}
+		if ((valueTest = ap.getCreateDate()) != "") {		
+			nsdl += "       <dc:date>" + valueTest + "</dc:date>";			
+		}
+		nsdl += "</nsdl_dc:nsdl_dc>";
+
+		return nsdl;
 	}
 
+	private static FLRPacket buildActivityProperties0(AlfrescoPacket ap, AlfrescoPacket feedback, String type) {
+		JsDate date = JsDate.create();
+		String dateStr = getISOdate0(date);
+		FLRPacket fp = FLRPacket.makePacket();
+		
+		// Describe the actor
+		FLRPacket actor = FLRPacket.makePacket();
+		actor.addKeyValue("objectType", "community");
+		actor.addKeyArray("description", "ADL RUSSEL user community");		
+		fp.addKeyValue("actor", actor);
+
+		// Describe the verb (activity)
+		if (type == FLR_ACTIVITY_RATINGS) {
+			FLRPacket payload = FLRPacket.makePacket();
+			payload.addKeyValue("avg", feedback.getAverageRating());
+			payload.addKeyValue("scale min", "1");
+			payload.addKeyValue("scale max", "5");
+			payload.addKeyValue("sample size", feedback.getRatingCount());
+			FLRPacket value = FLRPacket.makePacket();
+			value.addKeyValue("measureType", "star average");
+			value.addKeyValue("value", payload);
+			FLRPacket measure = FLRPacket.makePacket();
+			measure.addKeyValue("action", "rated");
+			measure.addKeyValue("measure", value);
+			measure.addKeyValue("context", "repository");		
+			measure.addKeyValue("date", ap.getCreateDate() + "/" + dateStr.substring(0, dateStr.indexOf('T')));	
+			fp.addKeyValue("verb", measure);
+			fp.addKeyValue("content", feedback.getRatingCount() + " member(s) of the ADL RUSSEL user community gave '"+ap.getTitle()+"' a rating of "+ feedback.getAverageRating() + " out of 5 stars");
+		}
+		else if (type == FLR_ACTIVITY_COMMENTS) {
+			FLRPacket payload = FLRPacket.makePacket();
+			payload.addKeyValue("measureType", "count");
+			payload.addKeyValue("value", feedback.getCommentCount());
+			FLRPacket measure = FLRPacket.makePacket();
+			measure.addKeyValue("action", "commented");
+			measure.addKeyValue("measure", payload);		
+			measure.addKeyValue("date", ap.getCreateDate() + "/" + dateStr.substring(0, dateStr.indexOf('T')));	
+			measure.addKeyValue("context", "ADL RUSSEL repository");
+			fp.addKeyValue("verb", measure);
+			fp.addKeyValue("content", feedback.getCommentCount() + " member(s) of the ADL RUSSEL user community commented on '"+ap.getTitle()+"'.");
+		}
+		else if (type == FLR_ACTIVITY_ISD) {
+			FLRPacket payload = FLRPacket.makePacket();
+			payload.addKeyValue("measureType", "count");
+			payload.addKeyValue("value", feedback.getValueString("count"));
+			FLRPacket measure = FLRPacket.makePacket();
+			measure.addKeyValue("action", "aligned");
+			measure.addKeyValue("measure", payload);		
+			measure.addKeyValue("date", ap.getCreateDate() + "/" + dateStr.substring(0, dateStr.indexOf('T')));	
+			measure.addKeyValue("context", feedback.getValueString("template")+" instructional strategy");
+			fp.addKeyValue("verb", measure);
+			FLRPacket object = FLRPacket.makePacket();
+			object.addKeyValue("objectType", "Instructional Strategy");
+			object.addKeyValue("description", feedback.getValueString("strategy"));		
+			fp.addKeyArray("related", object);
+			fp.addKeyValue("content", "'"+ap.getTitle() + "' has been aligned with the '"+feedback.getValueString("strategy")+"' part of the '"+ feedback.getValueString("template") + "' template "+feedback.getValueString("count")+" time(s).");
+		}
+		
+		// Describe the object
+		FLRPacket object = FLRPacket.makePacket();
+		object.addKeyValue("objectType", "resource");
+		if (ap.getRusselValue("russel:FLRid") != null) {
+			object.addKeyValue("id", ap.getRusselValue("russel:FLRtag"));	
+		} else {
+			object.addKeyValue("id", CommunicationHub.siteURL+"?id="+ap.getNodeId());	
+		}
+		fp.addKeyValue("object", object);
+
+		if (ap.getRusselValue("russel:FLRid") != null) {
+			object = FLRPacket.makePacket();
+			object.addKeyValue("objectType", "comment");
+			object.addKeyValue("id", CommunicationHub.siteURL+"?id="+ap.getNodeId());		
+			fp.addKeyArray("related", object);
+		}
+
+		return fp;
+	}
+	
+	private static FLRPacket buildActivityRecord0(AlfrescoPacket ap, AlfrescoPacket feedback, String type) { // ISD or RATING
+		FLRPacket activity = FLRPacket.makePacket();
+		activity.addKeyValue("activity", buildActivityProperties0(ap, feedback, type));
+		return activity;
+	}
+	
+	// FLRAPI public methods
+	public static String buildFLRResourceDataDescription(AlfrescoPacket ap) {
+		JsDate date = JsDate.create();
+
+		FLRPacket fpRdd = FLRPacket.makePacket();
+		fpRdd.addKeyValue("doc_type", "resource_data");
+		fpRdd.addKeyValue("resource_data_type", "metadata");		
+		fpRdd.addKeyValue("node_timestamp", getISOdate0(date));	
+		fpRdd.addKeyValue("TOS", FLRPacket.makePacketTOS());	
+		fpRdd.addKeyValue("payload_placement", "inline");	
+		fpRdd.addKeyArray("payload_schema", "NSDL DC 1.02.020");	
+		fpRdd.addKeyValue("payload_schema_locator", "http://ns.nsdl.org/schemas/nsdl_dc/nsdl_dc_v1.02.xsd");
+		fpRdd.addKeyValue("active", true);	
+		fpRdd.addKeyValue("doc_version", "0.23.0");	
+		fpRdd.addKeyValue("resource_locator", CommunicationHub.siteURL+"?id="+ap.getNodeId());	
+		fpRdd.addKeyValue("publishing_node", "RUSSEL");
+		fpRdd.addKeyValue("identity", FLRPacket.makePacketIdentity(ap.getPublisher()));
+		fpRdd.addKeyValue("resource_data", buildNsdlDcRecord0(ap));  
+		
+		return fpRdd.toJSONString();
+	}
+	
+	public static String buildFLRResourceDataActivity(AlfrescoPacket ap, AlfrescoPacket feedback, String type) { 
+		JsDate date = JsDate.create();
+
+		FLRPacket fpRdd = FLRPacket.makePacket();
+		fpRdd.addKeyValue("doc_type", "resource_data");
+		fpRdd.addKeyValue("resource_data_type", "paradata");		// assertion?
+		fpRdd.addKeyValue("active", true);	
+		fpRdd.addKeyValue("node_timestamp", getISOdate0(date));	
+		fpRdd.addKeyValue("create_timestamp", getISOdate0(date));	
+		fpRdd.addKeyValue("TOS", FLRPacket.makePacketTOS());	
+		fpRdd.addKeyValue("payload_placement", "inline");	
+		fpRdd.addKeyArray("payload_schema", "LR Paradata 1.0");	
+		fpRdd.addKeyValue("doc_version", "0.23.0");	
+		fpRdd.addKeyValue("resource_locator", CommunicationHub.siteURL+"?id="+ap.getNodeId());	
+		fpRdd.addKeyValue("publishing_node", "RUSSEL");
+		fpRdd.addKeyValue("identity", FLRPacket.makePacketIdentity(ap.getPublisher()));
+		fpRdd.addKeyValue("resource_data", buildActivityRecord0(ap, feedback, type));  
+
+		return fpRdd.toJSONString();
+	}
+	
+	public static String buildFLRDocuments(ArrayList<String> docs) {
+		FLRPacket fpDocs = FLRPacket.makePacket();
+		String docAcc = "";
+		for (int docIndex=0;docIndex<docs.size();docIndex++)
+			docAcc += "," + docs.get(docIndex);
+		if (docAcc!="")
+			docAcc = docAcc.substring(1);
+		fpDocs.addKeyArray("documents", CommunicationHub.parseJSON(docAcc));
+
+		return fpDocs.toJSONString();
+	}
+
+	public static AlfrescoPacket parseFLRResponse(String op, FLRPacket response, AlfrescoPacket ap) {
+		AlfrescoPacket status = AlfrescoPacket.makePacket();
+		
+		if (op.equals(FLR_PUBLISH_SETTING)) {
+			if (response.getResponseStatus().equals("true")) {
+				JsArray<FLRPacket> results = response.getResponseDocResults();
+				for (int i=0; i<results.length(); i++) {  //NOTE: right now we are only publishing one node at a time
+					FLRPacket doc = results.get(i);
+					if (doc.getResponseStatus().equals("true")) {
+						status.addKeyValue("status", FLR_SUCCESS);
+						status.addKeyValue("flr_ID", doc.getResponseDocID());
+						status.addKeyValue("russel_ID", ap.getNodeId());
+					}
+					else {
+						status.addKeyValue("status", FLR_FAILURE);
+						status.addKeyValue("error", doc.getResponseError());
+					}
+				}
+			}
+			else {
+				status.addKeyValue("status", FLR_FAILURE);
+				status.addKeyValue("error", response.getResponseError());
+			}
+		}
+		else if (op.equals(FLR_ACTIVITY_SETTING)) {
+			if (response.getResponseStatus().equals("true")) {
+				status.addKeyValue("status", FLR_SUCCESS);
+				JsArray<FLRPacket> results = response.getResponseDocResults();
+				status.addKeyArray("list",results.toString());
+			}
+			else {
+				status.addKeyValue("status", FLR_FAILURE);
+				status.addKeyValue("error", response.getResponseError());
+			}
+		}
+
+		return status;
+	}
+	
+	public static void saveFLRsetting(String setting, String value) {
+		// TODO: Need to save these settings to a file or Alfresco node -- they are currently only maintained within a session.
+		if (setting.equalsIgnoreCase(FLR_REPOSITORY_SETTING))  {
+		    FLR_REPOSITORY_MODE = value;
+		}
+		else if ((setting.equalsIgnoreCase(FLR_IMPORT_SETTING)) && 
+			    (value.equalsIgnoreCase(FLR_IMPORT_ENABLED)||value.equalsIgnoreCase(FLR_IMPORT_DISABLED))) {
+			FLR_IMPORT_MODE = value;
+		}
+		else if ((setting.equalsIgnoreCase(FLR_PUBLISH_SETTING)) && 
+		    (value.equalsIgnoreCase(FLR_PUBLISH_ACTIONS_NONE)||value.equalsIgnoreCase(FLR_PUBLISH_ACTIONS_GENERAL)||value.equalsIgnoreCase(FLR_PUBLISH_ACTIONS_ISD)||value.equalsIgnoreCase(FLR_PUBLISH_ACTIONS_ALL))) {
+			FLR_PUBLISH_MODE = value;
+		}
+		else if ((setting.equalsIgnoreCase(FLR_ACTIVITY_SETTING)) && 
+			(value.equalsIgnoreCase(FLR_ACTIVITY_ACTIONS_NONE)||value.equalsIgnoreCase(FLR_ACTIVITY_ACTIONS_FEEDBACK)||value.equalsIgnoreCase(FLR_ACTIVITY_ACTIONS_ISD)||value.equalsIgnoreCase(FLR_ACTIVITY_ACTIONS_ALL))) {
+			FLR_ACTIVITY_MODE = value;
+		}		
+	}
+
+	public static String getFLRsetting(String setting) {
+		String response = "Unknown FLR setting: "+setting; 
+		
+		if (setting.equalsIgnoreCase(FLR_REPOSITORY_SETTING))  {
+		    response = FLR_REPOSITORY_MODE;
+		}
+		else if (setting.equalsIgnoreCase(FLR_IMPORT_SETTING)) {
+			response = FLR_IMPORT_MODE;
+		}
+		else if (setting.equalsIgnoreCase(FLR_PUBLISH_SETTING)) {
+			response = FLR_PUBLISH_MODE;
+		}
+		else if (setting.equalsIgnoreCase(FLR_ACTIVITY_SETTING)) {
+			response = FLR_ACTIVITY_MODE;
+		}
+		return response;	
+	}
+	
+	// TODO: This initializeFLRconfig function is not being called until we are properly setting the value. It will need to be called after successful login.
+	public static void initializeFLRconfig() {
+		// TODO: Retrieve the file or node where configuration is saved, then pull the values from there.
+		String value = ""; // TODO: replace this with each relevant value
+		
+		saveFLRsetting(FLR_REPOSITORY_SETTING, value);
+		saveFLRsetting(FLR_IMPORT_SETTING, value);
+		saveFLRsetting(FLR_PUBLISH_SETTING, value);
+		saveFLRsetting(FLR_ACTIVITY_SETTING, value);
+	}
+	
 	public static void getFLRdata(FLRCallback<FLRPacket> callback) {
-		if (FLR_REPOSITORY_URL == FLR_SAND_BOX_URL) {
-			username = "lrdev";
-			password = "lrdev";
-			basicAuthenicationHeader = Base64.encode(username + ":" + password);
+		if (FLR_IMPORT_MODE.equals(FLR_IMPORT_ENABLED)) {
 			CommunicationHub.sendHTTP(CommunicationHub.GET,
-									  AlfrescoURL.getAlfrescoFlrImportURL(FLR_REPOSITORY_URL),  
+									  AlfrescoURL.getAlfrescoFlrImportURL(),  
 									  null,
 									  false, 
 									  callback);
-		}
+		} 
 		else {
-			Window.alert("Unrecognized FLR URL -- cannot log in");
+			callback.onFailure(new Throwable("FLR import is disabled.  See Repository Settings to change the configuration."));
 		}
-
 	}
-
+	
 	public static void putFLRdata(String postData, FLRCallback<FLRPacket> callback) {
-		if (FLR_REPOSITORY_URL == FLR_SAND_BOX_URL) {
-			username = "lrdev";
-			password = "lrdev";
-			basicAuthenicationHeader = Base64.encode(username + ":" + password);
-			FLRPacket fp = FLRPacket.makePacketSample();
-			String Url = FLR_REPOSITORY_URL + "publish";
-			Url = "http://posttestserver.com/post.php";
-			
+		if (!FLR_PUBLISH_MODE.equals(FLR_PUBLISH_ACTIONS_NONE)) {
 			CommunicationHub.sendHTTP(CommunicationHub.POST,
-									  AlfrescoURL.getAlfrescoDispatchURL(Url, "POST"), 
-									  fp.getRawString(), 
+									  AlfrescoURL.getAlfrescoFlrDispatchURL(), 
+									  postData, 
 									  false, 
 									  callback);
 		}
 		else {
-			Window.alert("Unrecognized FLR URL -- cannot log in");
+			callback.onFailure(new Throwable("FLR publish is disabled.  See Repository Settings to change the configuration."));
 		}
 	}
 	
-//	private static String getCurrentDirectoryId() {
-//		return currentDirectoryId.split("/")[currentDirectoryId.split("/").length-1];
-//	}
-//	
-//	public static void getObjectRatings(final String docResId, FLRCallback<FLRPacket> callback) {
-//		CommunicationHub.sendHTTP(CommunicationHub.GET, 
-//								  CommunicationHub.getFLRRatingURL(docResId),
-//								  null, 
-//								  false,
-//								  callback);
-//	}
-//
-//	public static void login(String uname, String password, FLRCallback<FLRPacket> callback) {
-//		username = uname;
-//		basicAuthenicationHeader = Base64.encode(username + ":" + password);
-//		FLRPacket fp = FLRPacket.makePacket();
-//		fp.addKeyValue("username", "\"" + uname + "\"");
-//		fp.addKeyValue("password", "\"" + password + "\"");
-//		CommunicationHub.sendHTTP(CommunicationHub.POST, 
-//								  CommunicationHub.getFLRLoginURL(), 
-//								  fp.toJSONString(), 
-//								  false,
-//								  callback);
-//	}
-//
-//	public static void logout(FLRCallback<FLRPacket> callback) {
-//		CommunicationHub.sendHTTP(CommunicationHub.DELETE, 
-//								  CommunicationHub.getFLRLogoutURL(getWebServiceCallParameters()[1]), 
-//								  null, 
-//								  false,
-//								  callback);
-//	}
-//	
-//	private static final native String getThumbnailImageURL(FLRPacket fp) /*-{
-//		var bb;
-//		if (Blob==undefined) {
-//			bb = new (window.BlobBuilder || window.MozBlobBuilder || window.WebKitBlobBuilder || window.OBlobBuilder || window.msBlobBuilder);
-//			bb.append(ap.contentStream);
-//			if (window.URL!=undefined&&window.URL.createObjectURL!=undefined)
-//				return window.URL.createObjectURL(bb.getBlob("image/png"));
-//			else
-//				return window.webkitURL.createObjectURL(bb.getBlob("image/png"));
-//		} else {
-//			bb = new Blob([fp.contentStream], { "type": "image/png" });
-//			if (window.URL!=undefined&&window.URL.createObjectURL!=undefined)
-//				return window.URL.createObjectURL(bb);
-//			else
-//				return window.webkitURL.createObjectURL(bb);
-//		}
-//	}-*/;
-//
-//	public static String getThumbnail(String id) {
-//		return CommunicationHub.buildFLRThumbnailURL(id);
-//	}
-//	
-//	public static void getThumbnail(String id, final FLRCallback<FLRPacket> callback) {
-//		CommunicationHub.sendHTTP(CommunicationHub.GET,
-//								  CommunicationHub.buildFLRThumbnailURL(id),
-//								  null,
-//								  true,
-//								  new FLRCallback<FLRPacket>() {
-//									@Override
-//									public void onSuccess(FLRPacket FLRPacket) {
-//										FLRPacket fp = com.eduworks.gwt.russel.ui.client.net.FLRPacket.makePacket();
-//										fp.addKeyValue("imageURL", "\"" + getThumbnailImageURL(FLRPacket) + "\"");
-//										callback.onSuccess(fp);
-//									}
-//									
-//									@Override
-//									public void onFailure(Throwable caught) {
-//										callback.onFailure(caught);
-//									}
-//								});
-//	}
-//	
-//	public static void deleteDocument(String id, FLRCallback<FLRPacket> callback) {
-//		CommunicationHub.sendHTTP(CommunicationHub.DELETE, 
-//								  CommunicationHub.getFLRNodeURL(id),
-//								  null, 
-//								  false,
-//								  callback);
-//	}
-//
-//	public static void updateCurrentDirectory(final String path) {
-//		CommunicationHub.sendHTTP(CommunicationHub.GET, 
-//								  CommunicationHub.getFLRFolderIdURL(path), 
-//								  null, 
-//								  false,
-//								  new FLRCallback<FLRPacket>() {
-//										@Override
-//										public void onFailure(Throwable caught) {
-//											Window.alert("Fooing updating current directory failed - " + caught.getMessage());
-//										}
-//							
-//										@Override
-//										public void onSuccess(FLRPacket result) {
-//											currentDirectoryId = result.getDirectory();
-//										}
-//									});
-//	}
-//	
-//	public static void updateCurrentDirectory(final String path, final FLRCallback<FLRPacket> callback) {
-//		CommunicationHub.sendHTTP(CommunicationHub.GET, 
-//								  CommunicationHub.getFLRFolderIdURL(path), 
-//								  null, 
-//								  false,
-//								  new FLRCallback<FLRPacket>() {
-//										@Override
-//										public void onFailure(Throwable caught) {
-//											Window.alert("Fooing updating current directory failed - " + caught.getMessage());
-//											callback.onFailure(caught);
-//										}
-//							
-//										@Override
-//										public void onSuccess(FLRPacket result) {
-//											currentDirectoryId = result.getDirectory();
-//											callback.onSuccess(result);
-//										}
-//									});
-//	}
-//
-//	public static void search(FLRPacket fp, FLRCallback<FLRPacket> callback) {
-//		CommunicationHub.sendHTTP(CommunicationHub.GET, 
-//				CommunicationHub.getFLRShareSearch(fp.getValueString("terms"), 
-//														fp.getValueString("tags"), 
-//														100, 
-//														fp.getValueString("sort"),
-//														fp.getValueString("query")), 
-//								  null, 
-//								  false,
-//								  callback);	
-//	}
-//	
-//	public static void setObjectProperties(String id, String postData, FLRCallback<FLRPacket> callback) {
-//		CommunicationHub.sendHTTP(CommunicationHub.POST,
-//								  CommunicationHub.getFLRMetadataURL(id), 
-//								  postData, 
-//								  false, 
-//								  callback);
-//	}
-//	
-//	public static String downloadContentURL(String id, String docName) {
-//		return CommunicationHub.getObjectStreamURL(id, docName);
-//	}
-//	
-//	public static void getObjectStream(String id, String docName, FLRCallback<FLRPacket> callback) {
-//		CommunicationHub.sendHTTP(CommunicationHub.GET,
-//								  CommunicationHub.getObjectStreamURL(id, docName),
-//								  null,
-//								  true,
-//								  callback);
-//	}
-//	
-//	
-//	public static void getObjectString(String id, String docName, FLRCallback<FLRPacket> callback) {
-//		CommunicationHub.sendHTTP(CommunicationHub.GET,
-//								  CommunicationHub.getObjectStreamURL(id, docName),
-//								  null,
-//								  false,
-//								  callback);
-//	}
-//	
-//	public static void getAllObjectComments(String nodeId, FLRCallback<FLRPacket> callback) {
-//		CommunicationHub.sendHTTP(CommunicationHub.GET, 
-//								  CommunicationHub.getFLRNodeURL(nodeId) + "/comments", 
-//								  null, 
-//								  false,
-//								  callback);
-//	}
-//	
-//	public static void addObjectComment(String nodeId, String title, String commentData, FLRCallback<FLRPacket> callback) {
-//		FLRPacket fp = FLRPacket.makePacket();
-//		fp.addKeyValue("title", title);
-//		fp.addKeyValue("content", commentData);
-//		CommunicationHub.sendHTTP(CommunicationHub.POST, 
-//								  CommunicationHub.getFLRNodeURL(nodeId) + "/comments", 
-//								  fp.toJSONString(), 
-//								  false,
-//								  callback);
-//	}
-//	
-//	public static void deleteObjectComment(String nodeId, FLRCallback<FLRPacket> callback) {
-//		CommunicationHub.sendHTTP(CommunicationHub.DELETE, 
-//				  				  CommunicationHub.getFLRCommentsURL(nodeId), 
-//				  				  null, 
-//				  				  false, 
-//				  				  callback);
-//	}
+	public static void putFLRactivity(String activityString, FLRCallback<FLRPacket> callback) {
+		if (!FLR_ACTIVITY_MODE.equals(FLR_ACTIVITY_ACTIONS_NONE)) {			
+			CommunicationHub.sendHTTP(CommunicationHub.POST,
+									  AlfrescoURL.getAlfrescoFlrDispatchURL(), 
+									  activityString,
+									  false, 
+									  callback);
+		}
+		else {
+			callback.onFailure(new Throwable("FLR activity stream publish is disabled.  See Repository Settings to change the configuration."));
+		}
+	}
 	
-//	public static void addAspectToNode(String nodeId, String[] aspects, FLRCallback<FLRPacket> callback) {
-//		FLRPacket fp = FLRPacket.makePacket();
-//		fp.addKeyValue("nodeRef", "workspace://SpacesStore/" + nodeId);
-//		String aspectString = "";
-//		for (int aspectIndex=0;aspectIndex<aspects.length;aspectIndex++)
-//			aspectString += "," + aspects[aspectIndex];
-//		if (aspectString!="")
-//			aspectString = aspectString.substring(1);
-//		fp.addKeyValue("aspects", aspectString);
-//		CommunicationHub.sendHTTP(CommunicationHub.POST, 
-//								  CommunicationHub.getFLRAddAspectURL(), 
-//								  fp.toJSONWrappedString(), 
-//								  false,
-//								  callback);	
-//	}
 	
-	/**
-	 * 
-	 * @param filename
-	 * @param contents for non-html text use a base64 encoding
-	 * @param mimeType
-	 * @param createLocation Root starts at Company Home
-	 * @param objectType
-	 * @param callback
-	 */
-//	public static void createObjectNode(String filename, String contents, String mimeType, String createLocation, String objectType, FLRCallback<FLRPacket> callback) {
-//		String payloadXML = "";
-//		payloadXML = CommunicationHub.ATOM_XML_PREAMBLE + "<entry xmlns=\"http://www.w3.org/2005/Atom\" xmlns:app=\"http://www.w3.org/2007/app\" xmlns:cmisra=\"http://docs.oasis-open.org/ns/cmis/restatom/200908/\" xmlns:cmis=\"http://docs.oasis-open.org/ns/cmis/core/200908/\">";
-//		payloadXML += "<title>" + filename + "</title>";
-//		payloadXML += "<author><name>" + username + "</name></author>";
-//		payloadXML += "<summary></summary>";
-//		if (objectType==DOCUMENT_OBJECT)
-//			payloadXML += "<content type=\"" + mimeType + "\">" + contents + "</content>";
-//		payloadXML += "<cmisra:object><cmis:properties>";
-//		payloadXML += "<cmis:propertyId propertyDefinitionId=\"cmis:objectTypeId\">";
-//		if (objectType==DOCUMENT_OBJECT)
-//			payloadXML += "<cmis:value>cmis:document</cmis:value>";
-//		else if (objectType==FOLDER_OBJECT)
-//			payloadXML += "<cmis:value>cmis:folder</cmis:value>";
-//		payloadXML += "</cmis:propertyId>";
-//		/* unused currently unsure if needed
-//			<cmis:propertyString propertyDefinitionId=\"cmis:name\">\
-//			<cmis:value>CMIS Demo</cmis:value>\
-//			</cmis:propertyString>\
-//		*/
-//		payloadXML += "</cmis:properties></cmisra:object></entry>";
-//		CommunicationHub.sendHTTP(CommunicationHub.POST, 
-//								  CommunicationHub.getFLRCreateNode(createLocation), 
-//								  payloadXML,
-//								  false,
-//								  callback);
-//	}
-			
+
 }
