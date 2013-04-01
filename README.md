@@ -1,3 +1,12 @@
+RUSSEL Interface:
+
+       RUSSEL - https://github.com/adlnet/RUSSEL
+       RUSSELgwt - https://github.com/adlnet/RUSSELgwt
+
+RUSSEL Alfresco Backend:
+
+       RUSSELamp - https://github.com/adlnet/RUSSELamp
+
 APACHE 2.0 LICENSE TEXT
 
 Copyright 2012-2013 Eduworks Corporation
