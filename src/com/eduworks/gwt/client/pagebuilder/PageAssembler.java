@@ -80,6 +80,11 @@ public class PageAssembler
 		$wnd.$('#' + elementId).change();
 	}-*/;
 	
+	
+	public static final long getIdCount() {
+		return iDCounter;
+	}
+	
 	public static final void setBuildNumber(String build) {
 		buildNumber = build;
 	}
